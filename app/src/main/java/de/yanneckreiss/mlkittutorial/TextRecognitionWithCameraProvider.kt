@@ -1,17 +1,41 @@
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.Matrix
+import android.graphics.YuvImage
+import android.media.Image
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -22,25 +46,14 @@ import androidx.lifecycle.LifecycleOwner
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.ImageFormat
-import android.graphics.Matrix
-import android.graphics.YuvImage
-import android.media.Image
-import androidx.annotation.OptIn
-import androidx.camera.core.ExperimentalGetImage
-import androidx.camera.view.PreviewView
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
+import de.yanneckreiss.mlkittutorial.util.LicenseTextDetector
 import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalGetImage::class)
 @Composable
 fun CameraPreview(
-    modifier: Modifier = Modifier,
-    onTextRecognized: (String) -> Unit
+    roi: Rect,
+    modifier: Modifier = Modifier, onTextRecognized: (String) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = context as LifecycleOwner
@@ -76,48 +89,39 @@ fun CameraPreview(
                 factory = { context ->
                     val previewView = PreviewView(context)
                     val preview = Preview.Builder().build()
-                    val selector = CameraSelector.Builder()
-                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                        .build()
-
+                    val selector =
+                        CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                            .build()
                     preview.setSurfaceProvider(previewView.surfaceProvider)
 
-                    val imageAnalyzer = ImageAnalysis.Builder()
-                        .build()
-                        .also {
-                            it.setAnalyzer(
-                                ContextCompat.getMainExecutor(context)
-                            ) { imageProxy ->
-                                val mediaImage = imageProxy.image
-                                if (mediaImage != null) {
-                                    // Define the region of interest as a fraction of the image size
-                                    val roi = Rect(
-                                        left = 0.3f,
-                                        top = 0.4f,
-                                        right = 0.8f,
-                                        bottom = 0.6f
-                                    )
+                    val imageAnalyzer = ImageAnalysis.Builder().build().also {
+                        it.setAnalyzer(
+                            ContextCompat.getMainExecutor(context)
+                        ) { imageProxy ->
+                            val mediaImage = imageProxy.image
+                            if (mediaImage != null) {
+                                val croppedBitmap = cropImage(
+                                    mediaImage, imageProxy.imageInfo.rotationDegrees, roi
+                                )
+                                val image = InputImage.fromBitmap(croppedBitmap, 0)
 
-                                    val croppedBitmap = cropImage(
-                                        mediaImage,
-                                        imageProxy.imageInfo.rotationDegrees,
-                                        roi
-                                    )
-                                    val image = InputImage.fromBitmap(croppedBitmap, 0)
-
-                                    textRecognizer.process(image)
-                                        .addOnSuccessListener { visionText ->
-                                            onTextRecognized(visionText.text)
+                                textRecognizer.process(image).addOnSuccessListener { visionText ->
+                                    visionText.textBlocks.forEach { block ->
+                                        block.lines.forEach { line ->
+                                            LicenseTextDetector().textDetector(line.text) { type, number ->
+                                                Log.d("carNumberr", "type: $type, number: $number")
+                                            }
                                         }
-                                        .addOnFailureListener {
-                                            // Handle the error
-                                        }
-                                        .addOnCompleteListener {
-                                            imageProxy.close()
-                                        }
+                                    }
+                                    onTextRecognized(visionText.text)
+                                }.addOnFailureListener {
+                                    // Handle the error
+                                }.addOnCompleteListener {
+                                    imageProxy.close()
                                 }
                             }
                         }
+                    }
 
                     try {
                         val cameraProvider = cameraProviderFuture.get()
@@ -129,8 +133,7 @@ fun CameraPreview(
                         // Handle exception
                     }
                     previewView
-                },
-                modifier = Modifier.fillMaxSize()
+                }, modifier = Modifier.fillMaxSize()
             )
         }
     } else {
@@ -154,11 +157,7 @@ fun cropImage(image: Image, rotationDegrees: Int, roi: Rect): Bitmap {
     uBuffer.get(nv21, ySize + vSize, uSize)
 
     val yuvImage = YuvImage(
-        nv21,
-        ImageFormat.NV21,
-        image.width,
-        image.height,
-        null
+        nv21, ImageFormat.NV21, image.width, image.height, null
     )
     val out = ByteArrayOutputStream()
     yuvImage.compressToJpeg(android.graphics.Rect(0, 0, image.width, image.height), 100, out)
@@ -170,13 +169,7 @@ fun cropImage(image: Image, rotationDegrees: Int, roi: Rect): Bitmap {
 
     val scaledBitmap = Bitmap.createScaledBitmap(bitmap, bitmap.width, bitmap.height, true)
     val rotatedBitmap = Bitmap.createBitmap(
-        scaledBitmap,
-        0,
-        0,
-        scaledBitmap.width,
-        scaledBitmap.height,
-        matrix,
-        true
+        scaledBitmap, 0, 0, scaledBitmap.width, scaledBitmap.height, matrix, true
     )
 
     val cropLeft = (roi.left * rotatedBitmap.width).toInt()
@@ -188,14 +181,18 @@ fun cropImage(image: Image, rotationDegrees: Int, roi: Rect): Bitmap {
 }
 
 @Composable
-fun OverlayFrame(modifier: Modifier = Modifier) {
+fun OverlayFrame(
+    roi: Rect,
+    modifier: Modifier = Modifier
+) {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val canvasWidth = size.width
         val canvasHeight = size.height
-        val rectWidth = canvasWidth * 0.8f
-        val rectHeight = canvasHeight * 0.2f
-        val rectLeft = (canvasWidth - rectWidth) / 2
-        val rectTop = (canvasHeight - rectHeight) / 2
+
+        val rectLeft = roi.left * canvasWidth
+        val rectTop = roi.top * canvasHeight
+        val rectWidth = roi.width * canvasWidth
+        val rectHeight = roi.height * canvasHeight
 
         // Draw the darkened areas
         drawRect(
@@ -207,8 +204,7 @@ fun OverlayFrame(modifier: Modifier = Modifier) {
             color = Color.Black.copy(alpha = 0.3f),
             topLeft = Offset(0f, rectTop + rectHeight),
             size = Size(
-                canvasWidth,
-                canvasHeight - rectTop - rectHeight
+                canvasWidth, canvasHeight - rectTop - rectHeight
             )
         )
         drawRect(
@@ -223,27 +219,33 @@ fun OverlayFrame(modifier: Modifier = Modifier) {
         )
 
         // Draw the frame
-        drawRect(
+        drawRoundRect(
             color = Color.White,
             topLeft = Offset(rectLeft, rectTop),
             size = Size(rectWidth, rectHeight),
-            style = Stroke(width = 4.dp.toPx())
+            style = Stroke(width = 4.dp.toPx()),
+            cornerRadius = CornerRadius(5.dp.toPx())
         )
     }
 }
 
 @Composable
-fun LicensePlateScannerScreen(modifier: Modifier = Modifier) {
+fun LicensePlateScannerScreen1(modifier: Modifier = Modifier) {
     var recognizedText by remember { mutableStateOf("") }
+
+    val roi = Rect(
+        left = 0.05f, top = 0.5f, right = 0.95f, bottom = 0.6f
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         CameraPreview(
+            roi = roi,
             modifier = Modifier.fillMaxSize(),
             onTextRecognized = { text ->
                 recognizedText = text
             }
         )
-        OverlayFrame()
+        OverlayFrame(roi)
         Column(
             modifier = Modifier
                 .fillMaxSize()

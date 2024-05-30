@@ -1,13 +1,21 @@
 package de.yanneckreiss.mlkittutorial.ui.camera
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.ImageFormat
+import android.graphics.Matrix
+import android.graphics.YuvImage
+import android.media.Image
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.camera.core.AspectRatio
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,12 +31,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import java.io.ByteArrayOutputStream
 
 @Composable
 fun CameraScreen() {
@@ -40,7 +53,8 @@ private fun CameraContent() {
 
     val context: Context = LocalContext.current
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
-    val cameraController: LifecycleCameraController = remember { LifecycleCameraController(context) }
+    val cameraController: LifecycleCameraController =
+        remember { LifecycleCameraController(context) }
     var detectedText: String by remember { mutableStateOf("No text detected yet..") }
 
     fun onTextUpdated(updatedText: String) {
@@ -49,22 +63,19 @@ private fun CameraContent() {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = { TopAppBar(title = { Text("Text Scanner") }) },
     ) { paddingValues: PaddingValues ->
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = androidx.compose.ui.Alignment.BottomCenter
         ) {
 
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+            AndroidView(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
                 factory = { context ->
                     PreviewView(context).apply {
                         layoutParams = LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
                         )
                         setBackgroundColor(Color.BLACK)
                         implementationMode = PreviewView.ImplementationMode.COMPATIBLE
@@ -78,9 +89,7 @@ private fun CameraContent() {
                             onDetectedTextUpdated = ::onTextUpdated
                         )
                     }
-                }
-            )
-
+                })
             Text(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -106,6 +115,11 @@ private fun startTextRecognition(
         TextRecognitionAnalyzer(onDetectedTextUpdated = onDetectedTextUpdated)
     )
 
+
+
     cameraController.bindToLifecycle(lifecycleOwner)
     previewView.controller = cameraController
 }
+
+
+
