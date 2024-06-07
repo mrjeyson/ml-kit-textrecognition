@@ -245,8 +245,6 @@ fun LicensePlateScannerScreen1(modifier: Modifier = Modifier) {
                 recognizedText = text
             }
         )
-
-
         OverlayFrame(roi)
         Column(
             modifier = Modifier
