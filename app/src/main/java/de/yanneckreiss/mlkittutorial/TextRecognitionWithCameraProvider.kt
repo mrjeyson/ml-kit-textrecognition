@@ -236,7 +236,6 @@ fun LicensePlateScannerScreen1(modifier: Modifier = Modifier) {
     val roi = Rect(
         left = 0.05f, top = 0.5f, right = 0.95f, bottom = 0.6f
     )
-
     Box(modifier = Modifier.fillMaxSize()) {
         CameraPreview(
             roi = roi,
