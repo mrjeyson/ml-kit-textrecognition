@@ -231,6 +231,7 @@ fun OverlayFrame(
 
 @Composable
 fun LicensePlateScannerScreen1(modifier: Modifier = Modifier) {
+
     var recognizedText by remember { mutableStateOf("") }
 
     val roi = Rect(
