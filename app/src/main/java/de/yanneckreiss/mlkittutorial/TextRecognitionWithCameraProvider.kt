@@ -230,7 +230,7 @@ fun OverlayFrame(
 }
 
 @Composable
-fun LicensePlateScannerScreen1(modifier: Modifier = Modifier) {
+fun LicensePlateScannerScreen1() {
 
     var recognizedText by remember { mutableStateOf("") }
 
