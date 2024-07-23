@@ -229,7 +229,6 @@ fun OverlayFrame(
     }
 }
 
-
 @Composable
 fun LicensePlateScannerScreen1() {
 
