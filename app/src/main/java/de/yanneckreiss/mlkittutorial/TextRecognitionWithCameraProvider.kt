@@ -56,6 +56,7 @@ fun CameraPreview(
     modifier: Modifier = Modifier, onTextRecognized: (String) -> Unit
 ) {
 
+
     val context = LocalContext.current
     val lifecycleOwner = context as LifecycleOwner
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
