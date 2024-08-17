@@ -169,6 +169,7 @@ fun OverlayFrame(modifier: Modifier = Modifier) {
 }
 
 fun filterTextByROI(recognizedText: String, previewView: androidx.camera.view.PreviewView): String {
+
     // Get the size of the previewView
     val width = previewView.width
     val height = previewView.height
