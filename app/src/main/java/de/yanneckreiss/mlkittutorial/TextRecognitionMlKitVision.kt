@@ -46,7 +46,6 @@ fun LicensePlateScannerScreen2(modifier: Modifier = Modifier) {
         hasCameraPermission = granted
     }
 
-
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             launcher.launch(Manifest.permission.CAMERA)
