@@ -32,6 +32,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 fun LicensePlateScannerScreen2(modifier: Modifier = Modifier) {
 
 
+
     var recognizedText by remember { mutableStateOf("") }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
