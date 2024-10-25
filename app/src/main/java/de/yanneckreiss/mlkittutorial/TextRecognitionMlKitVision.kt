@@ -46,7 +46,6 @@ fun LicensePlateScannerScreen2(modifier: Modifier = Modifier) {
 
 
 
-
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
