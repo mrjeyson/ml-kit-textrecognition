@@ -30,6 +30,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 @Composable
 fun LicensePlateScannerScreen2(modifier: Modifier = Modifier) {
+
     var recognizedText by remember { mutableStateOf("") }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -40,8 +41,6 @@ fun LicensePlateScannerScreen2(modifier: Modifier = Modifier) {
             ) == PackageManager.PERMISSION_GRANTED
         )
     }
-
-
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
