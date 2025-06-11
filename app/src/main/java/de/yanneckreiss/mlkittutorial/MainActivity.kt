@@ -13,6 +13,7 @@ import de.yanneckreiss.mlkittutorial.ui.theme.JetpackComposeMLKitTutorialTheme
 class MainActivity : ComponentActivity() {
 
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
